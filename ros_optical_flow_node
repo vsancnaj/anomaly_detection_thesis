@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+
+import rospy
+import cv2 as cv
+import numpy as np
+import sys
+
+from sensor_msgs.msg import CompressedImage
+from cv_bridge import CvBridge, CvBridgeError
+
+
+class image_converter:
+    def _init_(self):
+        # initialize ros publisher, ros subscriber
+        self.publisher = rospy.Publisher("optical_flow_output", CompressedImage, queue_size=10)
+
+        self.bridge = CvBridge()
+
+        self.subscriber = rospy.Subscriber("/stereo_ueye_cam_1/left/image_raw/compressed", CompressedImage, self.callback, queue_size=1)
+
+
+    def callback(self, data):
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+
+        prev_gray = cv.cvtColor(cv_image, cv.COLOR_BGR2GRAY)
+
+        mask = np.zeros_like(cv_image)
+
+        mask[..., 1]= 255
+
+        while(cv_image.isOpened()):
+            cv_image2 = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            
+            gray = cv.cvtColor(cv_image2, cv.COLOR_BGR2GRAY)
+
+            flow = cv.calcOpicalFlowFarneback(prev_gray, gray, 
+                                            None,
+                                            0.5,
+                                            3,
+                                            5,
+                                            3,
+                                            3,
+                                            1.2,
+                                            0)
+
+            magnitude, angle = cv. cartToPolar(flow[...,0], flow[...,1])
+
+            mask[..., 0] =  angle * 180/ np.pi/ 2
+
+            mask[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
+
+            rgb = cv.cvtColor(mask, cv.COLOR_HSV2RGB)
+
+            prev_gray = gray 
+
+            cv.imshow("Image window", rgb)
+            cv.waitKey(3)
+
+            try:
+                self.publisher.publish(self.bridge.cv2_to_imgmsg(rgb, "bgr8"))
+            except CvBridgeError as e:
+                print(e)
+        
+def main(args):
+    ic = image_converter()
+    rospy.init_node("image_converter", anonymous=True)
+    try:
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Shutting down")
+    cv.destroyAllWindows()
+
+if _name_ == "_main_":
+    main(sys.argv)
