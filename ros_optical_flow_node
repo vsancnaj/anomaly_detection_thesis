@@ -5,18 +5,18 @@ import cv2 as cv
 import numpy as np
 import sys
 
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
 
 class image_converter:
     def _init_(self):
         # initialize ros publisher, ros subscriber
-        self.publisher = rospy.Publisher("optical_flow_output", CompressedImage, queue_size=10)
+        self.publisher = rospy.Publisher("optical_flow_output", Image, queue_size=10)
 
         self.bridge = CvBridge()
 
-        self.subscriber = rospy.Subscriber("/stereo_ueye_cam_1/left/image_raw/compressed", CompressedImage, self.callback, queue_size=1)
+        self.subscriber = rospy.Subscriber("/stereo_ueye_cam_1/left/image_raw/compressed", Image, self.callback, queue_size=1)
 
 
     def callback(self, data):
