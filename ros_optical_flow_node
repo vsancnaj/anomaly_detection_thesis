@@ -67,13 +67,15 @@ class image_converter:
 
         rgb = cv.cvtColor(mask, cv.COLOR_HSV2RGB)
 
-        prev_cv_image = gray 
+        prev_cv_image = cv_image.copy()
 
         cv.imshow("Image window", rgb)
         cv.waitKey(3)
-
+        
+        
         try:
             self.publisher.publish(self.bridge.cv2_to_imgmsg(rgb, "bgr8"))
+        
         except CvBridgeError as e:
             print(e)
 
