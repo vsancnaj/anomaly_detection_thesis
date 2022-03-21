@@ -1,1 +1,1 @@
-# action_recognition_thesis
+# Action Recognition Thesis
