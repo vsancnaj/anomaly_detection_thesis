@@ -31,6 +31,7 @@ class image_converter:
 
         np_arr = np.fromstring(ros_img_msg.data, np.uint8)
         cv_image = cv.imdecode(np_arr, cv.IMREAD_COLOR)
+        #cv_image = cv.imdecode(np_arr, cv.CV_LOAD_IMAGE_COLOR)
         if not flag_process:
             flag_process = True
             prev_cv_image = cv_image.copy()
@@ -48,17 +49,9 @@ class image_converter:
         
         gray = cv.cvtColor(cv_image, cv.COLOR_BGR2GRAY)
 
-        flow = cv.calcOpicalFlowFarneback(prev_gray, gray, 
-                                        None,
-                                        0.5,
-                                        3,
-                                        5,
-                                        3,
-                                        3,
-                                        1.2,
-                                        0)
+        flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, 0.5, 3, 5, 3, 3, 1.2, 0)
 
-        magnitude, angle = cv. cartToPolar(flow[...,0], flow[...,1])
+        magnitude, angle = cv.cartToPolar(flow[...,0], flow[...,1])
 
         mask[..., 0] =  angle * 180/ np.pi/ 2
 
@@ -72,6 +65,7 @@ class image_converter:
         cv.imshow("Image window", rgb)
         cv.waitKey(3)
         
+        rospy.loginfo("Publishing")
         
         try:
             self.publisher.publish(self.bridge.cv2_to_imgmsg(rgb, "bgr8"))
