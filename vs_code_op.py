@@ -139,10 +139,13 @@ while(cap.isOpened()):
         print(df)
         count = 0
 
+    df.to_csv("velocities.csv")
     if cv.waitKey(1) & 0xFF == ord('q'):
+        
         break
 
-df.to_csv("velocities.csv")
+# df.to_csv("velocities.csv")
+print(df.columns)
 
 cap.release()
 cv.destroyAllWindows()
