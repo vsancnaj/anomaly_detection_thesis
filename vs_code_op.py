@@ -32,7 +32,7 @@ def vel_hist(input, label):
 
 
 
-def arrows_opt_flow(img, flow, df, count, step=16):
+def arrows_opt_flow(img, flow, count, step=16):
 
     h, w = img.shape[:2]  # exctract rows and columns
     y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)  # gets the coordinates from the grid
@@ -45,6 +45,11 @@ def arrows_opt_flow(img, flow, df, count, step=16):
     lines = np.int32(lines)
 
     img_bgr = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+    # empty data frame
+    #df2 = pd.DataFrame(columns=['No. Pixels','X Velocities','Y Velocities'])
+    df2 = pd.DataFrame({'No Pixels': [],
+                            'X Velocities': [],
+                            'Y Velocities':[]})
 
     for (x1, y1), (_x2, _y2) in lines:
         cv.circle(img_bgr, (x1, y1), 1, (0, 0, 255), -1)
@@ -62,12 +67,11 @@ def arrows_opt_flow(img, flow, df, count, step=16):
                             'X Velocities': [x[1]],
                             'Y Velocities':[y[1]]})
 
-        df = pd.concat([df, df2])
+        # df = pd.concat([df, df2], ignore_index=True)
     
-
     #cv.waitKey()
 
-    return img_bgr
+    return img_bgr,df2
 
 ################### MAIN ###################
 
@@ -87,9 +91,12 @@ mask = np.zeros_like(first_frame)
 # Sets image saturation to maximum
 mask[..., 1] = 255
 
+# empty data frame
+# df = pd.DataFrame(columns=['No. Pixels','X Velocities','Y Velocities'])
 df = pd.DataFrame({'No Pixels': [],
-                            'X Velocities': [],
-                            'Y Velocities':[]})
+                        'X Velocities': [],
+                        'Y Velocities':[]})
+
   
 # video loop
 while(cap.isOpened()):
@@ -117,7 +124,7 @@ while(cap.isOpened()):
                                        1.2,  # standard deviation of Gaussian
                                        0)  # flags
 
-    rgb = arrows_opt_flow(gray, flow, df, count)
+    rgb, df2  = arrows_opt_flow(gray, flow, count)
  
     # Opens a new window and displays the output frame
     cv.imshow("dense optical flow", rgb)
@@ -128,6 +135,8 @@ while(cap.isOpened()):
     if count != 10:
         count += 1
     else:
+        df = pd.concat([df, df2], ignore_index=True)
+        print(df)
         count = 0
 
     if cv.waitKey(1) & 0xFF == ord('q'):
