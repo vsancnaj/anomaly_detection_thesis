@@ -19,16 +19,18 @@ cap = cv.VideoCapture('/Users/valesanchez/Documents/VS_Code/Waste_Ant/mergedVide
 
 
 def vel_hist(input, label):
-    H = plt.hist(input.ravel(), bins=20, range=[-50,75]) 
-
+    hist_np, bins = np.histogram(input.ravel(), bins=30, range=[0,40])
+    
+    plt.hist(input.ravel(), bins=20, range=[0,40]) 
+   
     plt.xlabel('Velocity') 
     plt.ylabel('Number of Pixels')
 
     plt.title(label)
   
-    #plt.show()
+    # plt.show()
 
-    return H
+    return hist_np , bins
 
 
 
@@ -38,17 +40,13 @@ def arrows_opt_flow(img, flow, count, step=16):
     y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)  # gets the coordinates from the grid
     fx, fy = flow[y,x].T  # vel 
 
-    #print("Min velocity: ",np.amin(flow))
-    #print("Max velocity: ",np.amax(flow))
-
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)  
     lines = np.int32(lines)
 
     img_bgr = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
     # empty data frame
     #df2 = pd.DataFrame(columns=['No. Pixels','X Velocities','Y Velocities'])
-    df2 = pd.DataFrame({'No Pixels': [],
-                            'X Velocities': [],
+    df2 = pd.DataFrame({'X Velocities': [],
                             'Y Velocities':[]})
 
     for (x1, y1), (_x2, _y2) in lines:
@@ -57,19 +55,19 @@ def arrows_opt_flow(img, flow, count, step=16):
         # image, start point, end point, color, thickness
         # tip length: the length of the arrow tip in relation to the arrow lenght
     
+
     if count == 10:
 
         # plot velocities of x and y
-        x = vel_hist(fx, 'X Velocities')
-        y = vel_hist(fy, 'Y Velocities')
+        hist_x, bins = vel_hist(fx, 'X Velocities')
+        hist_y, bins = vel_hist(fy, 'Y Velocities')
+        
         # dictionary, each key represents the column of the data frame
-        df2 = pd.DataFrame({'No Pixels': [x[0]],
-                            'X Velocities': [x[1]],
-                            'Y Velocities':[y[1]]})
+        df2 = pd.DataFrame({'X Velocities': [hist_x], 
+                            'Y Velocities':[hist_y]})
 
-        # df = pd.concat([df, df2], ignore_index=True)
     
-    #cv.waitKey()
+    # cv.waitKey()
 
     return img_bgr,df2
 
@@ -82,19 +80,20 @@ ret, img = cap.read()
 count = 0
 
 # resize image
+# !!!! python try catch
 first_frame = cv.resize(img, (480, 434))
+roi1 = first_frame[100:434,70:480]
 
-prev_gray = cv.cvtColor(first_frame, cv.COLOR_BGR2GRAY)
+prev_gray = cv.cvtColor(roi1, cv.COLOR_BGR2GRAY)
 
-mask = np.zeros_like(first_frame)
+mask = np.zeros_like(roi1)
   
 # Sets image saturation to maximum
 mask[..., 1] = 255
 
 # empty data frame
 # df = pd.DataFrame(columns=['No. Pixels','X Velocities','Y Velocities'])
-df = pd.DataFrame({'No Pixels': [],
-                        'X Velocities': [],
+df = pd.DataFrame({'X Velocities': [],
                         'Y Velocities':[]})
 
   
@@ -105,13 +104,14 @@ while(cap.isOpened()):
 
     # resize image
     frame = cv.resize(img_two, (480, 434))
+    roi = frame[100:434,70:480]
 
-
-    cv.imshow("input", frame)
+    cv.imshow("input", roi)
         
     # Converts each frame to grayscale - we previously 
     # only converted the first frame to grayscale
-    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    gray = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
+    
 
     # Calculates dense optical flow by Farneback method
     flow = cv.calcOpticalFlowFarneback(prev_gray, gray, 
@@ -136,16 +136,15 @@ while(cap.isOpened()):
         count += 1
     else:
         df = pd.concat([df, df2], ignore_index=True)
-        print(df)
+        #print(df)
         count = 0
 
-    df.to_csv("velocities.csv")
+    df.to_csv("velocities.csv", index=False)
     if cv.waitKey(1) & 0xFF == ord('q'):
-        
         break
 
 # df.to_csv("velocities.csv")
-print(df.columns)
+# print(df.columns)
 
 cap.release()
 cv.destroyAllWindows()
