@@ -13,8 +13,7 @@ from cv_bridge import CvBridge, CvBridgeError
 flag_process = False
 prev_cv_image = None
 count = 0
-df = pd.DataFrame({'Range': [],
-                'X Velocities': [],
+df = pd.DataFrame({'X Velocities': [],
                 'Y Velocities':[]})
 
 
@@ -46,15 +45,23 @@ class image_converter:
             flag_process = True
             prev_cv_image = cv_image.copy()
             return False
+        
+        # resizing
+        prev_cv_image = cv.resize(prev_cv_image, (480, 434))
+        roi1 = prev_cv_image[100:434,70:480]
+        # actual size of image -> 1080, 1440
 
-        prev_gray = cv.cvtColor(prev_cv_image, cv.COLOR_BGR2GRAY)
 
-        mask = np.zeros_like(prev_cv_image)
+        prev_gray = cv.cvtColor(roi1, cv.COLOR_BGR2GRAY)
+
+        mask = np.zeros_like(roi1)
 
         mask[..., 1]= 255
 
-
-        gray = cv.cvtColor(cv_image, cv.COLOR_BGR2GRAY)
+        # resizing again
+        second_frame = cv.resize(cv_image, (480, 434))
+        roi2 = second_frame[100:434,70:480]
+        gray = cv.cvtColor(roi2, cv.COLOR_BGR2GRAY)
 
         flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         # 0.5, 3, 15, 3, 5, 1.2, 0
@@ -67,6 +74,8 @@ class image_converter:
         #cv.imshow("Image window", rgb)
         #cv.waitKey(3)
         
+        # message displayed in terminal
+        # rospy.loginfo(second_frame.shape)
         rospy.loginfo("Publishing")
             
         # increase count for number of frames
@@ -92,9 +101,8 @@ class image_converter:
 
 ################  FUNCTION ################
 def vel_hist(input, label):
-    hist_np, bins = np.histogram(input.ravel(), bins=20, range=[-50,75])
-    
-    plt.hist(input.ravel(), bins=20, range=[-50,75]) 
+    hist_np, bins = np.histogram(input.ravel(), bins=30, range=[0,40])
+    plt.hist(input.ravel(), bins=20, range=[0,40]) 
 
     plt.xlabel('Velocity') 
     plt.ylabel('Number of Pixels')
@@ -105,13 +113,10 @@ def vel_hist(input, label):
 
     return hist_np , bins
 
-def arrows_opt_flow(img, flow, count, step=30):
+def arrows_opt_flow(img, flow, count, step=16):
     h, w = img.shape[:2]  # exctract rows and columns
     y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)  # gets the coordinates from the grid
     fx, fy = flow[y,x].T  # vel 
-
-    # print("Min velocity: ",np.amin(flow))
-    # print("Max velocity: ",np.amax(flow))
 
 
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)  
@@ -120,13 +125,12 @@ def arrows_opt_flow(img, flow, count, step=30):
     img_bgr = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
     # empty data frame
     #df2 = pd.DataFrame(columns=['No. Pixels','X Velocities','Y Velocities'])
-    df2 = pd.DataFrame({'Range': [],
-                            'X Velocities': [],
+    df2 = pd.DataFrame({'X Velocities': [],
                             'Y Velocities':[]})
 
     for (x1, y1), (_x2, _y2) in lines:
         cv.circle(img_bgr, (x1, y1), 1, (0, 0, 255), -1)
-        cv.arrowedLine(img_bgr,(x1, y1), (_x2,_y2),(0,250,0), 1, tipLength=0.5)
+        cv.arrowedLine(img_bgr,(x1, y1), (_x2,_y2),(0,255,0), 1, tipLength=0.5)
         # image, start point, end point, color, thickness
         # tip length: the length of the arrow tip in relation to the arrow lenght
     
@@ -138,10 +142,8 @@ def arrows_opt_flow(img, flow, count, step=30):
         hist_y, bins = vel_hist(fy, 'Y Velocities')
 
         # dictionary, each key represents the column of the data frame
-        df2 = pd.DataFrame({'Range': [bins],
-                            'X Velocities': [hist_x],
+        df2 = pd.DataFrame({'X Velocities': [hist_x], 
                             'Y Velocities':[hist_y]})
-
       
     #cv.waitKey()
 
