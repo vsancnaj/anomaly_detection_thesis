@@ -6,6 +6,7 @@ import numpy as np
 import sys
 import pandas as pd
 from matplotlib import pyplot as plt 
+from sklearn import preprocessing
 
 from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
@@ -76,7 +77,8 @@ class image_converter:
         
         # message displayed in terminal
         # rospy.loginfo(second_frame.shape)
-        rospy.loginfo("Publishing")
+        # rospy.loginfo("Publishing")
+
             
         # increase count for number of frames
         if count != 10:
@@ -86,7 +88,7 @@ class image_converter:
             #print(df)
             count = 0
 
-        df.to_csv("/home/vsanchez/catkin_ws/src/bag_files/scripts/velocities.csv")
+        df.to_csv("/home/vsanchez/catkin_ws/src/bag_files/scripts/test.csv")
         # if cv.waitKey(1) & 0xFF == ord('q'):
         #     break
 
@@ -101,8 +103,8 @@ class image_converter:
 
 ################  FUNCTION ################
 def vel_hist(input, label):
-    hist_np, bins = np.histogram(input.ravel(), bins=30, range=[0,40])
-    plt.hist(input.ravel(), bins=20, range=[0,40]) 
+    hist_np, bins = np.histogram(input.ravel(), bins=30, range=[-10,40])
+    plt.hist(input.ravel(), bins=30, range=[-10,40]) 
 
     plt.xlabel('Velocity') 
     plt.ylabel('Number of Pixels')
@@ -117,6 +119,9 @@ def arrows_opt_flow(img, flow, count, step=16):
     h, w = img.shape[:2]  # exctract rows and columns
     y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)  # gets the coordinates from the grid
     fx, fy = flow[y,x].T  # vel 
+
+    #rospy.loginfo(np.amax(fy))
+    #rospy.loginfo(np.amin(fy))
 
 
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)  
@@ -136,10 +141,13 @@ def arrows_opt_flow(img, flow, count, step=16):
     
 
     if count == 10:
-
+        
         # plot velocities of x and y
-        hist_x, bins = vel_hist(fx, 'X Velocities')
-        hist_y, bins = vel_hist(fy, 'Y Velocities')
+        hist_x, bins = vel_hist(fx*5, 'X Velocities')
+        hist_y, bins = vel_hist(fy*5, 'Y Velocities')
+
+        rospy.loginfo(np.amax(fy))
+        rospy.loginfo(np.amin(fy))
 
         # dictionary, each key represents the column of the data frame
         df2 = pd.DataFrame({'X Velocities': [hist_x], 
